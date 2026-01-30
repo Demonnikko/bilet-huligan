@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>ХУЛИГАН - Проверка билетов</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #000;
+            color: #fff;
+            padding: 20px;
+            padding-bottom: 100px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            font-size: 14px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #888;
+        }
+
+        .camera-section {
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 18px;
+            font-size: 18px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #007AFF;
+            color: white;
+        }
+
+        .btn-primary:active {
+            background: #0051D5;
+        }
+
+        .btn-success {
+            background: #34C759;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #333;
+            color: white;
+        }
+
+        #video {
+            width: 100%;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        #canvas {
+            display: none;
+        }
+
+        .recognition-status {
+            text-align: center;
+            padding: 15px;
+            background: #1a1a1a;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .ticket-list {
+            margin-top: 30px;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            border: 2px solid #333;
+            border-radius: 10px;
+            background: #1a1a1a;
+            color: white;
+            margin-bottom: 15px;
+        }
+
+        .ticket-item {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #333;
+        }
+
+        .ticket-item.checked-in {
+            border-left-color: #34C759;
+            opacity: 0.6;
+        }
+
+        .ticket-name {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .ticket-number {
+            color: #888;
+            font-size: 14px;
+        }
+
+        .ticket-status {
+            float: right;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background: #333;
+            color: #888;
+        }
+
+        .status-checked {
+            background: #34C759;
+            color: white;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background: #1a1a1a;
+            padding: 25px;
+            border-radius: 15px;
+            max-width: 500px;
+            margin: 50px auto;
+        }
+
+        .modal h2 {
+            margin-bottom: 20px;
+            font-size: 22px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #888;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            border: 2px solid #333;
+            border-radius: 10px;
+            background: #000;
+            color: white;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-group .btn {
+            flex: 1;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .alert-success {
+            background: #34C759;
+            color: white;
+        }
+
+        .alert-error {
+            background: #FF3B30;
+            color: white;
+        }
+
+        .alert-warning {
+            background: #FF9500;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>ХУЛИГАН 31.01.26</h1>
+        <p>Проверка билетов</p>
+    </div>
+
+    <div class="stats">
+        <div class="stats-row">
+            <div class="stat">
+                <span class="stat-value" id="totalTickets">33</span>
+                <span class="stat-label">Всего</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value" id="checkedIn">0</span>
+                <span class="stat-label">Пришли</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value" id="remaining">33</span>
+                <span class="stat-label">Ожидают</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="camera-section">
+        <button class="btn btn-primary" onclick="startScanning()">📷 Сканировать номер дела</button>
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas"></canvas>
+        <div class="recognition-status" id="recognitionStatus">
+            <p>Распознавание...</p>
+        </div>
+    </div>
+
+    <button class="btn btn-success" onclick="openAddTicketModal()">➕ Добавить новый билет</button>
+
+    <div class="ticket-list">
+        <input type="text" class="search-box" id="searchBox" placeholder="🔍 Поиск по ФИО или номеру дела" oninput="filterTickets()">
+        <div id="ticketList"></div>
+    </div>
+
+    <!-- Модальное окно для добавления билета -->
+    <div class="modal" id="addTicketModal">
+        <div class="modal-content">
+            <h2>Добавить новый билет</h2>
+            <div class="form-group">
+                <label>Фамилия и Имя</label>
+                <input type="text" id="newTicketName" placeholder="ИВАН ИВАНОВ">
+            </div>
+            <div class="form-group">
+                <label>Номер дела (5 цифр)</label>
+                <input type="text" id="newTicketNumber" placeholder="12345" maxlength="5">
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="closeAddTicketModal()">Отмена</button>
+                <button class="btn btn-success" onclick="addNewTicket()">Добавить</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Изначальный список билетов
+        const initialTickets = [
+            {name: "АЛЕКСЕЙ ПЕЛЕВИН", caseNumber: "36249", checkedIn: false},
+            {name: "МАРИЯ ПЕЛЕВИНА", caseNumber: "82685", checkedIn: false},
+            {name: "АЛЕКСЕЙ МУРЗАЕВ", caseNumber: "36389", checkedIn: false},
+            {name: "НАТАЛЬЯ МУРЗАЕВА", caseNumber: "70827", checkedIn: false},
+            {name: "АЛЕКСЕЙ ШКИРЯ", caseNumber: "10070", checkedIn: false},
+            {name: "ОЛЬГА ШКИРЯ", caseNumber: "22389", checkedIn: false},
+            {name: "АЛЕНА ФРОЛОВА", caseNumber: "59620", checkedIn: false},
+            {name: "МАКСИМ НАРЧЕНКОВ", caseNumber: "35101", checkedIn: false},
+            {name: "ВАХТАНГ ДАРАЛИЯ", caseNumber: "65782", checkedIn: false},
+            {name: "ЛЮБОВЬ ТОЛМАЧЕВА", caseNumber: "18102", checkedIn: false},
+            {name: "АЛЕНА МУТОВКИНА", caseNumber: "52084", checkedIn: false},
+            {name: "АННА КУХТО", caseNumber: "27059", checkedIn: false},
+            {name: "ЕКАТЕРИНА БАРАНОВА", caseNumber: "59232", checkedIn: false},
+            {name: "ЕКАТЕРИНА СУРОВАЯ", caseNumber: "65087", checkedIn: false},
+            {name: "КИРИЛЛ СОЛДАТЕНКОВ", caseNumber: "31977", checkedIn: false},
+            {name: "ТАТЬЯНА СТРОГОВА", caseNumber: "36969", checkedIn: false},
+            {name: "ИЛЬЯ КОРШУНОВ", caseNumber: "23445", checkedIn: false},
+            {name: "НАТАЛЬЯ КОРШУНОВА", caseNumber: "86280", checkedIn: false},
+            {name: "ЛЮБОВЬ ИНЖУТКИНА", caseNumber: "99119", checkedIn: false},
+            {name: "ОКСАНА ЗОЛОТОВА", caseNumber: "49767", checkedIn: false},
+            {name: "НИКИТА ЗОЛОТОВ", caseNumber: "90268", checkedIn: false},
+            {name: "МАРИЯ НАУМОВА", caseNumber: "34775", checkedIn: false},
+            {name: "ЛЮДМИЛА МАРСАЛЬ", caseNumber: "65959", checkedIn: false},
+            {name: "ОКСАНА САЗАНОВА", caseNumber: "47204", checkedIn: false},
+            {name: "ПАВЕЛ ВАСИЛЬЕВ", caseNumber: "30713", checkedIn: false},
+            {name: "ЕКАТЕРИНА ТУГОЛУКОВА", caseNumber: "28319", checkedIn: false},
+            {name: "ОЛЬГА ТАРАСОВА", caseNumber: "13620", checkedIn: false},
+            {name: "ЕКАТЕРИНА ТЕРАУДС", caseNumber: "23275", checkedIn: false},
+            {name: "ОЛЬГА ПРИПОРОВА", caseNumber: "70690", checkedIn: false},
+            {name: "АННА ЧЕРНЯЕВА", caseNumber: "83033", checkedIn: false},
+            {name: "ОЛЬГА ГУЛЬДЯШОВА", caseNumber: "59610", checkedIn: false},
+            {name: "АННА РОГАНОВА", caseNumber: "72810", checkedIn: false},
+            {name: "ЮРИЙ КИСИЛЕВ", caseNumber: "28652", checkedIn: false}
+        ];
+
+        let tickets = [];
+        let stream = null;
+        let scanningActive = false;
+
+        // Загрузка данных из localStorage или использование начальных данных
+        function loadTickets() {
+            const saved = localStorage.getItem('huliganTickets');
+            if (saved) {
+                tickets = JSON.parse(saved);
+            } else {
+                tickets = [...initialTickets];
+                saveTickets();
+            }
+            renderTickets();
+            updateStats();
+        }
+
+        // Сохранение данных в localStorage
+        function saveTickets() {
+            localStorage.setItem('huliganTickets', JSON.stringify(tickets));
+        }
+
+        // Обновление статистики
+        function updateStats() {
+            const total = tickets.length;
+            const checked = tickets.filter(t => t.checkedIn).length;
+            const remaining = total - checked;
+
+            document.getElementById('totalTickets').textContent = total;
+            document.getElementById('checkedIn').textContent = checked;
+            document.getElementById('remaining').textContent = remaining;
+        }
+
+        // Отрисовка списка билетов
+        function renderTickets() {
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            const filteredTickets = tickets.filter(ticket =>
+                ticket.name.toLowerCase().includes(searchTerm) ||
+                ticket.caseNumber.includes(searchTerm)
+            );
+
+            const html = filteredTickets.map(ticket => `
+                <div class="ticket-item ${ticket.checkedIn ? 'checked-in' : ''}" onclick="toggleCheckIn('${ticket.caseNumber}')">
+                    <span class="ticket-status ${ticket.checkedIn ? 'status-checked' : 'status-pending'}">
+                        ${ticket.checkedIn ? '✓ Вошёл' : 'Ожидает'}
+                    </span>
+                    <div class="ticket-name">${ticket.name}</div>
+                    <div class="ticket-number">Дело № ${ticket.caseNumber}</div>
+                </div>
+            `).join('');
+
+            document.getElementById('ticketList').innerHTML = html;
+        }
+
+        // Фильтрация билетов
+        function filterTickets() {
+            renderTickets();
+        }
+
+        // Переключение статуса входа
+        function toggleCheckIn(caseNumber) {
+            const ticket = tickets.find(t => t.caseNumber === caseNumber);
+            if (ticket) {
+                if (ticket.checkedIn) {
+                    if (confirm(`${ticket.name} уже отмечен как вошедший. Отменить вход?`)) {
+                        ticket.checkedIn = false;
+                        saveTickets();
+                        renderTickets();
+                        updateStats();
+                    }
+                } else {
+                    ticket.checkedIn = true;
+                    saveTickets();
+                    renderTickets();
+                    updateStats();
+                    showAlert(`✓ ${ticket.name} отмечен как вошедший`, 'success');
+                }
+            }
+        }
+
+        // Показ уведомления
+        function showAlert(message, type = 'success') {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alert.style.position = 'fixed';
+            alert.style.top = '20px';
+            alert.style.left = '20px';
+            alert.style.right = '20px';
+            alert.style.zIndex = '2000';
+            document.body.appendChild(alert);
+
+            setTimeout(() => {
+                alert.remove();
+            }, 3000);
+        }
+
+        // Запуск сканирования
+        async function startScanning() {
+            const video = document.getElementById('video');
+            const statusDiv = document.getElementById('recognitionStatus');
+
+            if (scanningActive) {
+                stopScanning();
+                return;
+            }
+
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    }
+                });
+                video.srcObject = stream;
+                video.style.display = 'block';
+                statusDiv.style.display = 'block';
+                scanningActive = true;
+
+                document.querySelector('.btn-primary').textContent = '⏹ Остановить сканирование';
+
+                // Автоматическое распознавание каждые 2 секунды
+                scanInterval = setInterval(captureAndRecognize, 2000);
+
+            } catch (err) {
+                showAlert('Ошибка доступа к камере: ' + err.message, 'error');
+            }
+        }
+
+        // Остановка сканирования
+        function stopScanning() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+
+            document.getElementById('video').style.display = 'none';
+            document.getElementById('recognitionStatus').style.display = 'none';
+            scanningActive = false;
+
+            if (scanInterval) {
+                clearInterval(scanInterval);
+            }
+
+            document.querySelector('.btn-primary').textContent = '📷 Сканировать номер дела';
+        }
+
+        // Захват и распознавание изображения
+        async function captureAndRecognize() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            const statusDiv = document.getElementById('recognitionStatus');
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0);
+
+            statusDiv.innerHTML = '<p>🔍 Распознавание...</p>';
+
+            try {
+                const result = await Tesseract.recognize(
+                    canvas,
+                    'rus+eng',
+                    {
+                        logger: m => {
+                            if (m.status === 'recognizing text') {
+                                const progress = Math.round(m.progress * 100);
+                                statusDiv.innerHTML = `<p>🔍 Распознавание... ${progress}%</p>`;
+                            }
+                        }
+                    }
+                );
+
+                const text = result.data.text;
+                console.log('Распознанный текст:', text);
+
+                // Поиск 5-значного числа
+                const numberMatch = text.match(/\b\d{5}\b/);
+
+                if (numberMatch) {
+                    const caseNumber = numberMatch[0];
+                    const ticket = tickets.find(t => t.caseNumber === caseNumber);
+
+                    if (ticket) {
+                        if (ticket.checkedIn) {
+                            statusDiv.innerHTML = `<p style="color: #FF9500;">⚠️ ${ticket.name}<br>Уже отмечен как вошедший!</p>`;
+                            showAlert(`⚠️ ${ticket.name} уже вошёл!`, 'warning');
+                        } else {
+                            ticket.checkedIn = true;
+                            saveTickets();
+                            renderTickets();
+                            updateStats();
+                            statusDiv.innerHTML = `<p style="color: #34C759;">✓ ${ticket.name}<br>Дело № ${caseNumber}</p>`;
+                            showAlert(`✓ ${ticket.name} отмечен!`, 'success');
+
+                            // Остановить сканирование после успешного распознавания
+                            setTimeout(stopScanning, 2000);
+                        }
+                    } else {
+                        statusDiv.innerHTML = `<p style="color: #FF3B30;">❌ Билет № ${caseNumber}<br>не найден в базе</p>`;
+                        showAlert(`❌ Билет № ${caseNumber} не найден`, 'error');
+                    }
+                } else {
+                    statusDiv.innerHTML = '<p style="color: #888;">Номер не распознан.<br>Наведите камеру на номер дела</p>';
+                }
+
+            } catch (err) {
+                console.error('Ошибка распознавания:', err);
+                statusDiv.innerHTML = '<p style="color: #FF3B30;">Ошибка распознавания</p>';
+            }
+        }
+
+        // Открыть модальное окно добавления билета
+        function openAddTicketModal() {
+            document.getElementById('addTicketModal').style.display = 'block';
+            document.getElementById('newTicketName').value = '';
+            document.getElementById('newTicketNumber').value = '';
+        }
+
+        // Закрыть модальное окно
+        function closeAddTicketModal() {
+            document.getElementById('addTicketModal').style.display = 'none';
+        }
+
+        // Добавить новый билет
+        function addNewTicket() {
+            const name = document.getElementById('newTicketName').value.trim().toUpperCase();
+            const caseNumber = document.getElementById('newTicketNumber').value.trim();
+
+            // Валидация
+            if (!name) {
+                showAlert('❌ Введите ФИО', 'error');
+                return;
+            }
+
+            if (!/^\d{5}$/.test(caseNumber)) {
+                showAlert('❌ Номер дела должен содержать 5 цифр', 'error');
+                return;
+            }
+
+            // Проверка на дубликат номера
+            const existingTicket = tickets.find(t => t.caseNumber === caseNumber);
+            if (existingTicket) {
+                showAlert(`❌ Билет с номером ${caseNumber} уже существует (${existingTicket.name})`, 'error');
+                return;
+            }
+
+            // Добавление билета
+            tickets.push({
+                name: name,
+                caseNumber: caseNumber,
+                checkedIn: false
+            });
+
+            saveTickets();
+            renderTickets();
+            updateStats();
+            closeAddTicketModal();
+
+            showAlert(`✓ Билет добавлен: ${name}`, 'success');
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            const modal = document.getElementById('addTicketModal');
+            if (event.target === modal) {
+                closeAddTicketModal();
+            }
+        }
+
+        // Инициализация при загрузке страницы
+        window.onload = function() {
+            loadTickets();
+        };
+    </script>
+</body>
+</html>
