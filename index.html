@@ -6,7 +6,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>ХУЛИГАН - Проверка билетов</title>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -60,8 +59,31 @@
             color: #888;
         }
 
-        .camera-section {
+        .quick-input-section {
             margin-bottom: 30px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .input-box {
+            flex: 1;
+            padding: 18px;
+            font-size: 24px;
+            border: 2px solid #333;
+            border-radius: 12px;
+            background: #1a1a1a;
+            color: white;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .input-box:focus {
+            border-color: #007AFF;
+            outline: none;
         }
 
         .btn {
@@ -95,26 +117,6 @@
             color: white;
         }
 
-        #video {
-            width: 100%;
-            border-radius: 12px;
-            margin-bottom: 15px;
-            display: none;
-        }
-
-        #canvas {
-            display: none;
-        }
-
-        .recognition-status {
-            text-align: center;
-            padding: 15px;
-            background: #1a1a1a;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            display: none;
-        }
-
         .ticket-list {
             margin-top: 30px;
         }
@@ -136,6 +138,7 @@
             border-radius: 10px;
             margin-bottom: 10px;
             border-left: 4px solid #333;
+            cursor: pointer;
         }
 
         .ticket-item.checked-in {
@@ -249,6 +252,28 @@
             background: #FF9500;
             color: white;
         }
+
+        .quick-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .quick-btn {
+            padding: 12px;
+            font-size: 20px;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .quick-btn:active {
+            background: #3a3a3a;
+        }
     </style>
 </head>
 <body>
@@ -260,7 +285,7 @@
     <div class="stats">
         <div class="stats-row">
             <div class="stat">
-                <span class="stat-value" id="totalTickets">33</span>
+                <span class="stat-value" id="totalTickets">38</span>
                 <span class="stat-label">Всего</span>
             </div>
             <div class="stat">
@@ -268,22 +293,36 @@
                 <span class="stat-label">Пришли</span>
             </div>
             <div class="stat">
-                <span class="stat-value" id="remaining">33</span>
+                <span class="stat-value" id="remaining">38</span>
                 <span class="stat-label">Ожидают</span>
             </div>
         </div>
     </div>
 
-    <div class="camera-section">
-        <button class="btn btn-primary" onclick="startScanning()">📷 Сканировать номер дела</button>
-        <video id="video" autoplay playsinline></video>
-        <canvas id="canvas"></canvas>
-        <div class="recognition-status" id="recognitionStatus">
-            <p>Распознавание...</p>
+    <div class="quick-input-section">
+        <div class="input-group">
+            <input type="tel" class="input-box" id="quickInput" placeholder="Номер дела" maxlength="5" inputmode="numeric" autofocus>
+            <button class="btn btn-primary" onclick="checkTicketByNumber()" style="flex: 0 0 80px; padding: 10px;">✓</button>
+        </div>
+
+        <div class="quick-buttons">
+            <button class="quick-btn" onclick="addDigit('1')">1</button>
+            <button class="quick-btn" onclick="addDigit('2')">2</button>
+            <button class="quick-btn" onclick="addDigit('3')">3</button>
+            <button class="quick-btn" onclick="addDigit('4')">4</button>
+            <button class="quick-btn" onclick="addDigit('5')">5</button>
+            <button class="quick-btn" onclick="addDigit('6')">6</button>
+            <button class="quick-btn" onclick="addDigit('7')">7</button>
+            <button class="quick-btn" onclick="addDigit('8')">8</button>
+            <button class="quick-btn" onclick="addDigit('9')">9</button>
+            <button class="quick-btn" onclick="clearInput()">⌫</button>
+            <button class="quick-btn" onclick="addDigit('0')">0</button>
+            <button class="quick-btn" onclick="checkTicketByNumber()">✓</button>
         </div>
     </div>
 
     <button class="btn btn-success" onclick="openAddTicketModal()">➕ Добавить новый билет</button>
+    <button class="btn btn-secondary" onclick="resetAllCheckedIn()" style="background: #d32f2f;">🔄 Сбросить всех (после шоу)</button>
 
     <div class="ticket-list">
         <input type="text" class="search-box" id="searchBox" placeholder="🔍 Поиск по ФИО или номеру дела" oninput="filterTickets()">
@@ -344,16 +383,20 @@
             {name: "АННА ЧЕРНЯЕВА", caseNumber: "83033", checkedIn: false},
             {name: "ОЛЬГА ГУЛЬДЯШОВА", caseNumber: "59610", checkedIn: false},
             {name: "АННА РОГАНОВА", caseNumber: "72810", checkedIn: false},
-            {name: "ЮРИЙ КИСИЛЕВ", caseNumber: "28652", checkedIn: false}
+            {name: "ЮРИЙ КИСИЛЕВ", caseNumber: "28652", checkedIn: false},
+            {name: "АЛЕКСАНДР КРУГЛОВ", caseNumber: "98401", checkedIn: false},
+            {name: "ЮЛИЯ ЛУЧЕНЕЦКАЯ", caseNumber: "73495", checkedIn: false},
+            {name: "АЛЕНА КОРОТНЕВА", caseNumber: "65801", checkedIn: false},
+            {name: "АНДРЕЙ МАСЛОВ", caseNumber: "49914", checkedIn: false},
+            {name: "ЛЮДМИЛА ПУЗЫРЕВА", caseNumber: "41888", checkedIn: false}
         ];
 
         let tickets = [];
-        let stream = null;
-        let scanningActive = false;
 
         // Загрузка данных из localStorage или использование начальных данных
         function loadTickets() {
-            const saved = localStorage.getItem('huliganTickets');
+            // Принудительная загрузка новых билетов (изменен ключ для обновления)
+            const saved = localStorage.getItem('huliganTickets_v2');
             if (saved) {
                 tickets = JSON.parse(saved);
             } else {
@@ -366,7 +409,7 @@
 
         // Сохранение данных в localStorage
         function saveTickets() {
-            localStorage.setItem('huliganTickets', JSON.stringify(tickets));
+            localStorage.setItem('huliganTickets_v2', JSON.stringify(tickets));
         }
 
         // Обновление статистики
@@ -427,6 +470,55 @@
             }
         }
 
+        // Проверка билета по номеру
+        function checkTicketByNumber() {
+            const input = document.getElementById('quickInput');
+            const caseNumber = input.value.trim();
+
+            if (caseNumber.length !== 5) {
+                showAlert('❌ Введите 5-значный номер дела', 'error');
+                return;
+            }
+
+            const ticket = tickets.find(t => t.caseNumber === caseNumber);
+
+            if (ticket) {
+                if (ticket.checkedIn) {
+                    showAlert(`⚠️ ${ticket.name} уже отмечен как вошедший!`, 'warning');
+                } else {
+                    ticket.checkedIn = true;
+                    saveTickets();
+                    renderTickets();
+                    updateStats();
+                    showAlert(`✓ ${ticket.name} отмечен!`, 'success');
+                    input.value = '';
+                }
+            } else {
+                showAlert(`❌ Билет № ${caseNumber} не найден`, 'error');
+            }
+        }
+
+        // Добавление цифры
+        function addDigit(digit) {
+            const input = document.getElementById('quickInput');
+            if (input.value.length < 5) {
+                input.value += digit;
+            }
+        }
+
+        // Очистка ввода
+        function clearInput() {
+            const input = document.getElementById('quickInput');
+            input.value = input.value.slice(0, -1);
+        }
+
+        // Обработка Enter
+        document.getElementById('quickInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkTicketByNumber();
+            }
+        });
+
         // Показ уведомления
         function showAlert(message, type = 'success') {
             const alert = document.createElement('div');
@@ -442,123 +534,6 @@
             setTimeout(() => {
                 alert.remove();
             }, 3000);
-        }
-
-        // Запуск сканирования
-        async function startScanning() {
-            const video = document.getElementById('video');
-            const statusDiv = document.getElementById('recognitionStatus');
-
-            if (scanningActive) {
-                stopScanning();
-                return;
-            }
-
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: 'environment',
-                        width: { ideal: 1920 },
-                        height: { ideal: 1080 }
-                    }
-                });
-                video.srcObject = stream;
-                video.style.display = 'block';
-                statusDiv.style.display = 'block';
-                scanningActive = true;
-
-                document.querySelector('.btn-primary').textContent = '⏹ Остановить сканирование';
-
-                // Автоматическое распознавание каждые 2 секунды
-                scanInterval = setInterval(captureAndRecognize, 2000);
-
-            } catch (err) {
-                showAlert('Ошибка доступа к камере: ' + err.message, 'error');
-            }
-        }
-
-        // Остановка сканирования
-        function stopScanning() {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                stream = null;
-            }
-
-            document.getElementById('video').style.display = 'none';
-            document.getElementById('recognitionStatus').style.display = 'none';
-            scanningActive = false;
-
-            if (scanInterval) {
-                clearInterval(scanInterval);
-            }
-
-            document.querySelector('.btn-primary').textContent = '📷 Сканировать номер дела';
-        }
-
-        // Захват и распознавание изображения
-        async function captureAndRecognize() {
-            const video = document.getElementById('video');
-            const canvas = document.getElementById('canvas');
-            const ctx = canvas.getContext('2d');
-            const statusDiv = document.getElementById('recognitionStatus');
-
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0);
-
-            statusDiv.innerHTML = '<p>🔍 Распознавание...</p>';
-
-            try {
-                const result = await Tesseract.recognize(
-                    canvas,
-                    'rus+eng',
-                    {
-                        logger: m => {
-                            if (m.status === 'recognizing text') {
-                                const progress = Math.round(m.progress * 100);
-                                statusDiv.innerHTML = `<p>🔍 Распознавание... ${progress}%</p>`;
-                            }
-                        }
-                    }
-                );
-
-                const text = result.data.text;
-                console.log('Распознанный текст:', text);
-
-                // Поиск 5-значного числа
-                const numberMatch = text.match(/\b\d{5}\b/);
-
-                if (numberMatch) {
-                    const caseNumber = numberMatch[0];
-                    const ticket = tickets.find(t => t.caseNumber === caseNumber);
-
-                    if (ticket) {
-                        if (ticket.checkedIn) {
-                            statusDiv.innerHTML = `<p style="color: #FF9500;">⚠️ ${ticket.name}<br>Уже отмечен как вошедший!</p>`;
-                            showAlert(`⚠️ ${ticket.name} уже вошёл!`, 'warning');
-                        } else {
-                            ticket.checkedIn = true;
-                            saveTickets();
-                            renderTickets();
-                            updateStats();
-                            statusDiv.innerHTML = `<p style="color: #34C759;">✓ ${ticket.name}<br>Дело № ${caseNumber}</p>`;
-                            showAlert(`✓ ${ticket.name} отмечен!`, 'success');
-
-                            // Остановить сканирование после успешного распознавания
-                            setTimeout(stopScanning, 2000);
-                        }
-                    } else {
-                        statusDiv.innerHTML = `<p style="color: #FF3B30;">❌ Билет № ${caseNumber}<br>не найден в базе</p>`;
-                        showAlert(`❌ Билет № ${caseNumber} не найден`, 'error');
-                    }
-                } else {
-                    statusDiv.innerHTML = '<p style="color: #888;">Номер не распознан.<br>Наведите камеру на номер дела</p>';
-                }
-
-            } catch (err) {
-                console.error('Ошибка распознавания:', err);
-                statusDiv.innerHTML = '<p style="color: #FF3B30;">Ошибка распознавания</p>';
-            }
         }
 
         // Открыть модальное окно добавления билета
@@ -609,6 +584,19 @@
             closeAddTicketModal();
 
             showAlert(`✓ Билет добавлен: ${name}`, 'success');
+        }
+
+        // Сброс всех отметок "вошёл" после шоу
+        function resetAllCheckedIn() {
+            if (confirm('Сбросить все отметки "вошёл"? Все вернутся в статус "Ожидает". Используйте это после окончания шоу для подготовки к следующему мероприятию.')) {
+                tickets.forEach(ticket => {
+                    ticket.checkedIn = false;
+                });
+                saveTickets();
+                renderTickets();
+                updateStats();
+                showAlert('✓ Все отметки сброшены. Готово к новому шоу!', 'success');
+            }
         }
 
         // Закрытие модального окна при клике вне его
